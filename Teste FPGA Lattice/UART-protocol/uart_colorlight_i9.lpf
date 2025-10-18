@@ -1,0 +1,70 @@
+############################################################
+# Colorlight i9 v7.2  (LFE5U-45F-6BG381C)
+# Configuração UART para comunicação FPGA <-> Raspberry Pi Pico
+# 
+# Projeto: Sistema UART bidirecional @ 115200 baud
+# Clock: 25 MHz (interno do Colorlight i9)
+# Autor: Projeto Embarcatech - Etapa 2
+############################################################
+
+# ============================================================
+# CLOCK - 25 MHz (Oscilador interno do Colorlight i9)
+# ============================================================
+# Nota: O módulo UART espera 50 MHz, então use PLL para gerar 50 MHz
+# ou ajuste CLKS_PER_BIT = 217 para 25 MHz @ 115200 baud
+LOCATE COMP "clk_50mhz" SITE "P3";
+IOBUF  PORT "clk_50mhz" IO_TYPE=LVCMOS33;
+FREQUENCY PORT "clk_50mhz" 25.0 MHz;
+
+# ============================================================
+# RESET - Botão de reset (ativo baixo)
+# ============================================================
+# Usar entrada I1 como botão de reset
+LOCATE COMP "reset_n" SITE "D1";
+IOBUF  PORT "reset_n" IO_TYPE=LVCMOS33 PULLMODE=UP;
+
+# ============================================================
+# UART - Comunicação com Raspberry Pi Pico
+# ============================================================
+# UART TX (FPGA transmite -> Pico recebe)
+# Conectar ao pino RX do Raspberry Pi Pico (GP1)
+LOCATE COMP "uart_tx" SITE "E2";
+IOBUF  PORT "uart_tx" IO_TYPE=LVCMOS33 DRIVE=8 SLEWRATE=FAST;
+
+# UART RX (FPGA recebe <- Pico transmite)
+# Conectar ao pino TX do Raspberry Pi Pico (GP0)
+LOCATE COMP "uart_rx" SITE "D2";
+IOBUF  PORT "uart_rx" IO_TYPE=LVCMOS33 PULLMODE=UP;
+
+# ============================================================
+# LEDs - Indicadores de status e debug
+# ============================================================
+# LED 0 - Indica estado do LED controlado via UART
+LOCATE COMP "leds[0]" SITE "B1";
+IOBUF  PORT "leds[0]" IO_TYPE=LVCMOS33 DRIVE=8 SLEWRATE=FAST;
+
+# LED 1 - Segundo LED do array
+LOCATE COMP "leds[1]" SITE "C2";
+IOBUF  PORT "leds[1]" IO_TYPE=LVCMOS33 DRIVE=8 SLEWRATE=FAST;
+
+# LED 2 - Terceiro LED do array
+LOCATE COMP "leds[2]" SITE "C1";
+IOBUF  PORT "leds[2]" IO_TYPE=LVCMOS33 DRIVE=8 SLEWRATE=FAST;
+
+# LED 3 - Quarto LED do array
+LOCATE COMP "leds[3]" SITE "D3";
+IOBUF  PORT "leds[3]" IO_TYPE=LVCMOS33 DRIVE=8 SLEWRATE=FAST;
+
+# LED RX Active - Pisca quando recebe dados via UART
+LOCATE COMP "led_rx_active" SITE "E3";
+IOBUF  PORT "led_rx_active" IO_TYPE=LVCMOS33 DRIVE=8 SLEWRATE=FAST;
+
+# LED TX Active - Pisca quando transmite dados via UART
+LOCATE COMP "led_tx_active" SITE "F3";
+IOBUF  PORT "led_tx_active" IO_TYPE=LVCMOS33 DRIVE=8 SLEWRATE=FAST;
+
+# ============================================================
+# CONFIGURAÇÕES ADICIONAIS
+# ============================================================
+# Previne latch-up durante programação
+SYSCONFIG CONFIG_IOVOLTAGE=3.3 COMPRESS_CONFIG=ON MCCLK_FREQ=62;

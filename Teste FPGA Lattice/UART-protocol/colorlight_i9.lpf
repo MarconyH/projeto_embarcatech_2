@@ -1,0 +1,24 @@
+############################################################
+# Colorlight i9 v7.2  (LFE5U-45F-6BG381C)
+# Clock externo 25 MHz em P3
+############################################################
+
+#LOCATE   COMP "clk" SITE "P3";
+#IOBUF    PORT "clk" IO_TYPE=LVCMOS33;
+#FREQUENCY PORT "clk" 25.0 MHz;
+
+# Entradas (I1..I2) — ativo-alto com pull-down interno
+LOCATE COMP "I1" SITE "D1";
+#LOCATE COMP "I2" SITE "C1";
+
+IOBUF  PORT "I1" IO_TYPE=LVCMOS33 PULLMODE=DOWN;
+IOBUF  PORT "I2" IO_TYPE=LVCMOS33 PULLMODE=DOWN;
+
+# Saídas (O1) — ativo-alto (cátodo comum)
+LOCATE COMP "O1" SITE "E2";
+LOCATE COMP "O2" SITE "D2";  
+LOCATE COMP "O3" SITE "B1";  
+
+IOBUF  PORT "O1" IO_TYPE=LVCMOS33 DRIVE=8 SLEWRATE=FAST;
+IOBUF PORT "O2" IO_TYPE=LVCMOS33 DRIVE=8 SLEWRATE=FAST;
+IOBUF PORT "O3" IO_TYPE=LVCMOS33 DRIVE=8 SLEWRATE=FAST;
