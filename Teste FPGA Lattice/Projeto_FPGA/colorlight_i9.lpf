@@ -1,0 +1,61 @@
+############################################################
+# top_hough_uart.lpf
+# Restrições de Pinos para Projeto Hough via UART
+# FPGA: Lattice ECP5 (LFE5U-45F-6BG381C) - Colorlight i9
+# Clock: 25 MHz em P3
+############################################################
+
+# ==========================================================
+# CLOCK
+# Clock primário de 25 MHz no pino P3
+# ==========================================================
+LOCATE   COMP "clk" SITE "P3";
+IOBUF    PORT "clk" IO_TYPE=LVCMOS33;
+FREQUENCY PORT "clk" 25.0 MHz;
+
+# ==========================================================
+# INTERFACE UART COM RASPBERRY PI PICO
+# Pinos baseados no conector P3
+# ==========================================================
+
+# UART RX (FPGA Input) - Recebe dados da Pico (GP16/GP0 TX)
+# Ligado ao GP4 do LPF original (I1_START)
+LOCATE COMP "pico_tx" SITE "D1";
+IOBUF  PORT "pico_tx" IO_TYPE=LVCMOS33 PULLMODE=UP; # Pull-up para linha idle (HIGH)
+
+# UART TX (FPGA Output) - Envia resultados para a Pico (GP17/GP1 RX)
+# Ligado ao GP3 do LPF original (O1_M1)
+LOCATE COMP "fpga_tx" SITE "E2";
+IOBUF  PORT "fpga_tx" IO_TYPE=LVCMOS33 DRIVE=8 SLEWRATE=FAST;
+
+# ==========================================================
+# CONTROLE
+# ==========================================================
+
+# Reset Lógico (Mapeado para uma entrada de controle, usando C2 como I3_RESET)
+LOCATE COMP "I3_RESET" SITE "C2";
+IOBUF  PORT "I3_RESET" IO_TYPE=LVCMOS33 PULLMODE=DOWN; 
+# Nota: No top_hough_uart.sv, usamos I3_RESET como entrada de reset.
+
+# ==========================================================
+# LEDS DE STATUS (Mapeamento dos pinos restantes de O1..O5)
+# Usando as saídas O1_M1, O2_M2, O3_CRONOMETRO_ATIVO, etc., do seu exemplo
+# ==========================================================
+
+# LED [0] - Status Geral/O4_EM_CICLO (Pino A3)
+LOCATE COMP "led[0]" SITE "A3";
+IOBUF  PORT "led[0]" IO_TYPE=LVCMOS33 DRIVE=8 SLEWRATE=FAST;
+
+# LED [1] - RX Ativo/O2_M2 (Pino D2)
+LOCATE COMP "led[1]" SITE "D2";
+IOBUF  PORT "led[1]" IO_TYPE=LVCMOS33 DRIVE=8 SLEWRATE=FAST;
+
+# LED [2] - Processando/O3_CRONOMETRO_ATIVO (Pino B1)
+LOCATE COMP "led[2]" SITE "B1";
+IOBUF  PORT "led[2]" IO_TYPE=LVCMOS33 DRIVE=8 SLEWRATE=FAST;
+
+# ==========================================================
+# OBSERVAÇÕES
+# 1. A pinagem UART (D1/E2) é baseada na sua lista de pinos do P3.
+# 2. O reset I3_RESET (C2) é mapeado como entrada para o reset lógico no FPGA.
+# ==========================================================

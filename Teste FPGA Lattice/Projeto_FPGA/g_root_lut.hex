@@ -1,0 +1,18 @@
+// g_root_lut.hex
+// Valores representados em hexadecimal, um por linha.
+// 8192 entradas (0 a 8191)
+//
+// Exemplo (Valores Reais devem ser preenchidos):
+
+FF  // Endereço 0: G^2=0 -> SQRT(0) = 0 -> 255 - 0 = 255 (FFh)
+FE
+FD
+FC
+...
+05  // Endereço ~8191 (G^2 máximo, borda forte)
+04
+03
+02
+01
+00  // Endereço 8191: G^2 maximo -> 255 - 255 = 0 (00h)
+... (8192 linhas no total)
