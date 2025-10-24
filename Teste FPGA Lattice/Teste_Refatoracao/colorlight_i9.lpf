@@ -1,0 +1,51 @@
+############################################################
+# top_hough_uart.lpf
+# Restrições de Pinos para Projeto Hough via UART
+# FPGA: Lattice ECP5 (LFE5U-45F-6BG381C) - Colorlight i9
+# Clock: 25 MHz em P3
+############################################################
+
+# ==========================================================
+# CLOCK
+# Clock primário de 25 MHz no pino P3
+# ==========================================================
+LOCATE   COMP "clk" SITE "P3";
+IOBUF    PORT "clk" IO_TYPE=LVCMOS33;
+FREQUENCY PORT "clk" 25.0 MHz;
+
+# ==========================================================
+# INTERFACE UART COM RASPBERRY PI PICO
+# ==========================================================
+
+# UART RX (FPGA Input) - Conectado à porta I1_START (D1)
+LOCATE COMP "I1_START" SITE "D1";
+IOBUF  PORT "I1_START" IO_TYPE=LVCMOS33 PULLMODE=DOWN; 
+
+
+# UART TX (FPGA Output) - Conectado à porta O1_M1 (E2)
+LOCATE COMP "O1_M1" SITE "E2";
+IOBUF  PORT "O1_M1" IO_TYPE=LVCMOS33 DRIVE=8 SLEWRATE=FAST;
+
+# ==========================================================
+# CONTROLE
+# ==========================================================
+
+# Reset Lógico (C2)
+LOCATE COMP "I3_RESET" SITE "C2";
+IOBUF  PORT "I3_RESET" IO_TYPE=LVCMOS33 PULLMODE=DOWN; 
+
+# ==========================================================
+# LEDS DE STATUS (led[0], led[1], led[2])
+# ==========================================================
+
+# LED [0] - Pino A3
+LOCATE COMP "led[0]" SITE "A3";
+IOBUF  PORT "led[0]" IO_TYPE=LVCMOS33 DRIVE=8 SLEWRATE=FAST;
+
+# LED [1] - Pino D2
+LOCATE COMP "led[1]" SITE "D2";
+IOBUF  PORT "led[1]" IO_TYPE=LVCMOS33 DRIVE=8 SLEWRATE=FAST;
+
+# LED [2] - Pino B1
+LOCATE COMP "led[2]" SITE "B1";
+IOBUF  PORT "led[2]" IO_TYPE=LVCMOS33 DRIVE=8 SLEWRATE=FAST;
