@@ -26,45 +26,15 @@ IOBUF  PORT "reset_n" IO_TYPE=LVCMOS33 PULLMODE=UP;
 # ============================================================
 # UART - Comunicação com Raspberry Pi Pico
 # ============================================================
+# CONFIGURAÇÃO ORIGINAL (FUNCIONAVA NO TESTE MANUAL)
 # UART TX (FPGA transmite -> Pico recebe)
 # Conectar ao pino RX do Raspberry Pi Pico (GP1)
-LOCATE COMP "uart_tx" SITE "E2";
+LOCATE COMP "uart_tx" SITE "E2";  # ORIGINAL - FUNCIONAVA!
 IOBUF  PORT "uart_tx" IO_TYPE=LVCMOS33 DRIVE=8 SLEWRATE=FAST;
 
 # UART RX (FPGA recebe <- Pico transmite)
 # Conectar ao pino TX do Raspberry Pi Pico (GP0)
-LOCATE COMP "uart_rx" SITE "D2";
+LOCATE COMP "uart_rx" SITE "B1";  # ORIGINAL
 IOBUF  PORT "uart_rx" IO_TYPE=LVCMOS33 PULLMODE=UP;
 
-# ============================================================
-# LEDs - Indicadores de status e debug
-# ============================================================
-# LED 0 - Indica estado do LED controlado via UART
-LOCATE COMP "leds[0]" SITE "B1";
-IOBUF  PORT "leds[0]" IO_TYPE=LVCMOS33 DRIVE=8 SLEWRATE=FAST;
-
-# LED 1 - Segundo LED do array
-LOCATE COMP "leds[1]" SITE "C2";
-IOBUF  PORT "leds[1]" IO_TYPE=LVCMOS33 DRIVE=8 SLEWRATE=FAST;
-
-# LED 2 - Terceiro LED do array
-LOCATE COMP "leds[2]" SITE "C1";
-IOBUF  PORT "leds[2]" IO_TYPE=LVCMOS33 DRIVE=8 SLEWRATE=FAST;
-
-# LED 3 - Quarto LED do array
-LOCATE COMP "leds[3]" SITE "D3";
-IOBUF  PORT "leds[3]" IO_TYPE=LVCMOS33 DRIVE=8 SLEWRATE=FAST;
-
-# LED RX Active - Pisca quando recebe dados via UART
-LOCATE COMP "led_rx_active" SITE "E3";
-IOBUF  PORT "led_rx_active" IO_TYPE=LVCMOS33 DRIVE=8 SLEWRATE=FAST;
-
-# LED TX Active - Pisca quando transmite dados via UART
-LOCATE COMP "led_tx_active" SITE "F3";
-IOBUF  PORT "led_tx_active" IO_TYPE=LVCMOS33 DRIVE=8 SLEWRATE=FAST;
-
-# ============================================================
-# CONFIGURAÇÕES ADICIONAIS
-# ============================================================
-# Previne latch-up durante programação
 SYSCONFIG CONFIG_IOVOLTAGE=3.3 COMPRESS_CONFIG=ON MCCLK_FREQ=62;
