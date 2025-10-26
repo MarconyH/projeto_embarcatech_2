@@ -6,6 +6,14 @@ module uart_echo_colorlight_i9 (
 );
 
     // ========================================
+    // MODO DE TESTE: Descomente para testar TX isoladamente
+    // ========================================
+    // TESTE_TX_MANUAL: FPGA envia caracteres automaticamente (ignora RX)
+    // Comente a linha abaixo para voltar ao modo ECHO normal
+    // ========================================
+    // `define TESTE_TX_MANUAL
+    
+    // ========================================
     // POWER-ON RESET: Gera reset interno automático
     // ========================================
     logic [7:0] reset_counter = 8'd0;
@@ -45,8 +53,57 @@ module uart_echo_colorlight_i9 (
     );
     
     // ========================================
-    // LÓGICA DE ECHO - ATIVADA
-    // Quando recebe byte via UART, envia de volta
+    // SELEÇÃO DE MODO: TESTE TX vs ECHO NORMAL
+    // ========================================
+    
+`ifdef TESTE_TX_MANUAL
+    // ========================================
+    // MODO TESTE: TX Manual - Envia caracteres automaticamente
+    // FPGA envia 'A' a cada 500ms (ignora completamente RX)
+    // Use este modo para testar se o TX do FPGA funciona
+    // ========================================
+    logic [31:0] timer_counter;
+    logic [7:0]  test_char;
+    
+    // Timer: 25 MHz / 12.5M = 0.5 segundo
+    localparam TIMER_500MS = 25_000_000 / 2;
+    
+    always_ff @(posedge clk_50mhz or negedge reset_n_internal) begin
+        if (!reset_n_internal) begin
+            timer_counter <= 32'd0;
+            test_char <= 8'd65;  // Começa com 'A' (ASCII 65)
+            tx_dv <= 1'b0;
+            tx_byte <= 8'h00;
+        end else begin
+            tx_dv <= 1'b0;  // Default
+            
+            // Incrementa contador
+            if (timer_counter < TIMER_500MS) begin
+                timer_counter <= timer_counter + 1'b1;
+            end else begin
+                // Timer expirou - envia próximo caractere
+                timer_counter <= 32'd0;
+                
+                // Envia caractere atual
+                if (!tx_active) begin
+                    tx_dv <= 1'b1;
+                    tx_byte <= test_char;
+                    
+                    // Próximo caractere (A -> Z, depois volta para A)
+                    if (test_char < 8'd90) begin  // 'Z' = 90
+                        test_char <= test_char + 1'b1;
+                    end else begin
+                        test_char <= 8'd65;  // Volta para 'A'
+                    end
+                end
+            end
+        end
+    end
+    
+`else
+    // ========================================
+    // MODO NORMAL: ECHO - Envia de volta o que recebe
+    // Quando recebe byte via UART RX, envia de volta via TX
     // ========================================
     logic rx_received;
     always_ff @(posedge clk_50mhz or negedge reset_n_internal) begin
@@ -70,5 +127,6 @@ module uart_echo_colorlight_i9 (
             end
         end
     end
+`endif
 
 endmodule

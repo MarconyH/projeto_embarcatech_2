@@ -6,9 +6,9 @@
 // Envia 'A' a cada 1 segundo e mostra o que recebe do FPGA
 
 #define UART_ID uart0
-#define BAUD_RATE 115200
-#define UART_TX_PIN 0  // GP0 -> FPGA RX (D2)
-#define UART_RX_PIN 1  // GP1 <- FPGA TX (E2)
+#define BAUD_RATE 9600  // AJUSTADO PARA 9600 (mesma taxa do FPGA)
+#define UART_TX_PIN 0  // GP0 -> FPGA RX (A3 no LPF)
+#define UART_RX_PIN 1  // GP1 <- FPGA TX (D2 no LPF)
 
 int main() {
     // Inicializa stdio USB
@@ -32,36 +32,42 @@ int main() {
     
     uint32_t contador = 0;
     char caracter = 64;
+
+    uart_putc_raw(UART_ID, 'A');
     
     while (1) {
-        // Envia 'A' para o FPGA a cada 1 segundo
-        if (contador % 1000 == 0) {
-            caracter = caracter + 1;
-            uart_putc_raw(UART_ID, caracter);
-            printf("[%lu] TX -> %c\n", contador / 1000, caracter);
-        }
+        // // Envia 'A' para o FPGA a cada 1 segundo
+        // if (contador % 1000 == 0) {
+        //     caracter = caracter + 1;
+        //     uart_putc_raw(UART_ID, caracter);
+        //     printf("[%lu] TX -> %c\n", contador / 1000, caracter);
+        // }
         
         // Verifica se recebeu algo do FPGA
         if (uart_is_readable(UART_ID)) {
             uint8_t rx = uart_getc(UART_ID);
-            printf("      RX <- '%c' (0x%02X)\n", rx, rx);
-            
-            // Verifica se o echo está correto
-            if (rx == caracter) {
-                printf("      ✓ ECHO CORRETO!\n\n");
-            } else {
-                printf("      ✗ ERRO: esperava %c 0X%02X, recebeu 0x%02X\n\n", caracter, caracter, rx);
-            }
-            while (uart_is_readable(UART_ID)) {
+            if (rx == 'A')
+            {
+                printf("      RX <- '%c' (0x%02X)\n", rx, rx);
+                while (uart_is_readable(UART_ID)) {
                 uart_getc(UART_ID);
             }
+            }
+            
+            // // Verifica se o echo está correto
+            // if (rx == caracter) {
+            //     printf("      ✓ ECHO CORRETO!\n\n");
+            // } else {
+                // printf("      ✗ ERRO: esperava %c 0X%02X, recebeu 0x%02X\n\n", caracter, caracter, rx);
+            // }
         }
+        tight_loop_contents();
         
-        sleep_ms(1);
-        contador++;
-        if (caracter > 'Z')
-        {
-            caracter = 'A';
-        }
+        // sleep_ms(1);
+        // contador++;
+        // if (caracter > 'Z')
+        // {
+        //     caracter = 'A';
+        // }
     }
 }
