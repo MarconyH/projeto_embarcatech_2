@@ -10,7 +10,7 @@
 #define LENGHT 16
 #define HEADER_BYTE 0xAA  // Byte de sincronização
 
-uint8_t queue[WIDTH*LENGHT];
+volatile uint8_t queue[WIDTH*LENGHT];
 volatile int counter = 0;
 volatile bool synced = false;
 volatile bool header_echo_received = false;  // NOVA FLAG
@@ -21,35 +21,39 @@ void on_uart_rx() {
     while (uart_is_readable(UART_ID)) {
         int rv = uart_getc(UART_ID);
         if (rv < 0) break;
-        
         uint8_t byte = (uint8_t)rv;
-        
-        // Espera pelo header byte para sincronizar
+
+        // aguarda o primeiro header (sincroniza)
         if (!synced) {
             if (byte == HEADER_BYTE) {
                 synced = true;
+                header_echo_received = false;
                 counter = 0;
             }
-            continue;  // Descarta bytes antes do header
+            continue; // descarta tudo até o primeiro header
         }
-        
-        // NOVO: Descarta o ECHO do header (primeiro byte após sync)
-        if (synced && !header_echo_received) {
+
+        // descartamos quaisquer 0xAA adicionais (echo repetido)
+        if (!header_echo_received) {
             if (byte == HEADER_BYTE) {
+                // pula headers repetidos
+                continue;
+            } else {
+                // primeiro byte não-header após a sincronização é o primeiro dado
                 header_echo_received = true;
-                continue;  // Descarta o echo do header
+                // cai para armazenar este byte abaixo
             }
         }
-        
-        // Coleta dados após sincronização E após descartar echo
-        if (counter < (WIDTH*LENGHT)) {
+
+        // armazena bytes de dados (apenas dados reais; headers iniciais já removidos)
+        if (counter < (WIDTH * LENGHT)) {
             queue[counter++] = byte;
         }
     }
 }
 
 int main() {
-    stdio_init_all();
+    stdio_usb_init();
     sleep_ms(2000);
 
     uint8_t matrix[WIDTH][LENGHT];
@@ -130,8 +134,24 @@ int main() {
         printf("\nBytes corretos: %d/%d (%.1f%%)\n", correct, WIDTH*LENGHT, 
                100.0*correct/(WIDTH*LENGHT));
     }
-
     while (1) tight_loop_contents();
+    
+    // int c;
+    // while (1) {
+    //         if (uart_is_readable(UART_ID)) {
+    //             c = uart_getc(UART_ID);
+    //             if (c >= 0) {
+    //                 uint8_t b = (uint8_t)c;
+    //                 if (b >= 32 && b <= 126) {
+    //                     printf("RX: 0x%02X '%c'\n", b, b);
+    //                 } else {
+    //                     printf("RX: 0x%02X\n", b);
+    //                 }
+    //             }
+    //         } else {
+    //             sleep_ms(10);
+    //         }
+    // };
 }
 
 void send_image_16x16_raw(uint8_t img[WIDTH][LENGHT]) {

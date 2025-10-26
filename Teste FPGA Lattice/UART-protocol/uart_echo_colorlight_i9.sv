@@ -76,17 +76,17 @@ module uart_echo_colorlight_i9 (
     localparam HEADER_BYTE = 8'hAA;
     
     typedef enum logic [1:0] {
-        IDLE,
-        WAIT_HEADER_ECHO,
+        WAIT_HEADER,
         ECHO_DATA
     } state_t;
     
     state_t state;
-    logic [7:0] rx_fifo [0:7];  // FIFO aumentado para 8 bytes
-    logic [2:0] rx_fifo_wr_ptr;
-    logic [2:0] rx_fifo_rd_ptr;
-    logic [2:0] next_wr_ptr;
-    logic       rx_fifo_empty;
+    // removed rx_fifo declarations
+    // logic [7:0] rx_fifo [0:7];
+    // logic [2:0] rx_fifo_wr_ptr;
+    // logic [2:0] rx_fifo_rd_ptr;
+    // logic [2:0] next_wr_ptr;
+    // logic       rx_fifo_empty;
     logic       header_received;
     
     assign rx_fifo_empty = (rx_fifo_wr_ptr == rx_fifo_rd_ptr);
@@ -94,46 +94,32 @@ module uart_echo_colorlight_i9 (
 
     always_ff @(posedge clk_50mhz or negedge reset_n_internal) begin
         if (!reset_n_internal) begin
-            state <= IDLE;
+            state <= WAIT_HEADER;
             tx_dv <= 1'b0;
             tx_byte <= 8'h00;
-            rx_fifo_wr_ptr <= 3'b000;
-            rx_fifo_rd_ptr <= 3'b000;
             header_received <= 1'b0;
-            for (int i = 0; i < 8; i++) rx_fifo[i] <= 8'h00;
+            // for (int i = 0; i < 8; i++) rx_fifo[i] <= 8'h00;
         end else begin
             tx_dv <= 1'b0;
 
             case (state)
-                IDLE: begin
+                WAIT_HEADER: begin
+                    // aguarda header (não armazena nem ecoa aqui)
                     if (rx_dv && rx_byte == HEADER_BYTE) begin
                         header_received <= 1'b1;
-                        state <= WAIT_HEADER_ECHO;
-                    end
-                end
-                
-                WAIT_HEADER_ECHO: begin
-                    if (!tx_active) begin
-                        tx_dv <= 1'b1;
-                        tx_byte <= HEADER_BYTE;  // Echo header
                         state <= ECHO_DATA;
                     end
                 end
                 
                 ECHO_DATA: begin
-                    // Escreve dados no FIFO
+                    // Echo imediato: quando receber um byte (rx_dv),
+                    // se TX estiver livre, transmite imediatamente.
                     if (rx_dv) begin
-                        if (next_wr_ptr != rx_fifo_rd_ptr) begin
-                            rx_fifo[rx_fifo_wr_ptr] <= rx_byte;
-                            rx_fifo_wr_ptr <= next_wr_ptr;
+                        if (!tx_active) begin
+                            tx_dv <= 1'b1;
+                            tx_byte <= rx_byte;
                         end
-                    end
-                    
-                    // Lê FIFO e transmite
-                    if (!rx_fifo_empty && !tx_active) begin
-                        tx_dv <= 1'b1;
-                        tx_byte <= rx_fifo[rx_fifo_rd_ptr];
-                        rx_fifo_rd_ptr <= rx_fifo_rd_ptr + 3'b001;
+                        // se tx_active == 1, descartamos o byte (simplicidade)
                     end
                 end
             endcase
