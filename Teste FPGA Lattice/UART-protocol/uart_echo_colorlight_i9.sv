@@ -1,21 +1,12 @@
 module uart_echo_colorlight_i9 (
-    input  logic       clk_50mhz,    // P3 (25 MHz real)
-    input  logic       reset_n,      // D1
-    input  logic       uart_rx,      // D2 <- Pico TX (GP0)
-    output logic       uart_tx       // E2 -> Pico RX (GP1)
+    input  logic       clk_50mhz,
+    input  logic       reset_n,
+    input  logic       uart_rx,
+    output logic       uart_tx
 );
 
-    // ========================================
-    // MODO DE TESTE: Descomente para testar TX isoladamente
-    // ========================================
-    // TESTE_TX_MANUAL: FPGA envia caracteres automaticamente (ignora RX)
-    // Comente a linha abaixo para voltar ao modo ECHO normal
-    // ========================================
     // `define TESTE_TX_MANUAL
     
-    // ========================================
-    // POWER-ON RESET: Gera reset interno automático
-    // ========================================
     logic [7:0] reset_counter = 8'd0;
     logic reset_n_internal = 1'b0;
     
@@ -34,66 +25,46 @@ module uart_echo_colorlight_i9 (
     logic [7:0] tx_byte;
     logic       tx_active, tx_done;
     
-    // TESTE COM BAUD RATE REDUZIDO: 9600 baud (mais tolerante)
-    // CLKS_PER_BIT = 25_000_000 / 9600 = 2604 ciclos/bit
     uart_top #(
         .CLK_FREQ_HZ(25_000_000),
         .BAUD_RATE(9600)
     ) uart_inst (
         .i_clk(clk_50mhz),
-        .i_rst_n(reset_n_internal),     // USA RESET INTERNO
-        .i_uart_rx(uart_rx),           // RX conectado
+        .i_rst_n(reset_n_internal),
+        .i_uart_rx(uart_rx),
         .o_uart_tx(uart_tx),
         .i_tx_dv(tx_dv),
         .i_tx_byte(tx_byte),
         .o_tx_active(tx_active),
         .o_tx_done(tx_done),
-        .o_rx_dv(rx_dv),               // RX conectado
-        .o_rx_byte(rx_byte)            // RX conectado
+        .o_rx_dv(rx_dv),
+        .o_rx_byte(rx_byte)
     );
     
-    // ========================================
-    // SELEÇÃO DE MODO: TESTE TX vs ECHO NORMAL
-    // ========================================
-    
 `ifdef TESTE_TX_MANUAL
-    // ========================================
-    // MODO TESTE: TX Manual - Envia caracteres automaticamente
-    // FPGA envia 'A' a cada 500ms (ignora completamente RX)
-    // Use este modo para testar se o TX do FPGA funciona
-    // ========================================
     logic [31:0] timer_counter;
     logic [7:0]  test_char;
-    
-    // Timer: 25 MHz / 12.5M = 0.5 segundo
     localparam TIMER_500MS = 25_000_000 / 2;
     
     always_ff @(posedge clk_50mhz or negedge reset_n_internal) begin
         if (!reset_n_internal) begin
             timer_counter <= 32'd0;
-            test_char <= 8'd65;  // Começa com 'A' (ASCII 65)
+            test_char <= 8'd65;
             tx_dv <= 1'b0;
             tx_byte <= 8'h00;
         end else begin
-            tx_dv <= 1'b0;  // Default
-            
-            // Incrementa contador
+            tx_dv <= 1'b0;
             if (timer_counter < TIMER_500MS) begin
                 timer_counter <= timer_counter + 1'b1;
             end else begin
-                // Timer expirou - envia próximo caractere
                 timer_counter <= 32'd0;
-                
-                // Envia caractere atual
                 if (!tx_active) begin
                     tx_dv <= 1'b1;
                     tx_byte <= test_char;
-                    
-                    // Próximo caractere (A -> Z, depois volta para A)
-                    if (test_char < 8'd90) begin  // 'Z' = 90
+                    if (test_char < 8'd90) begin
                         test_char <= test_char + 1'b1;
                     end else begin
-                        test_char <= 8'd65;  // Volta para 'A'
+                        test_char <= 8'd65;
                     end
                 end
             end
@@ -101,30 +72,71 @@ module uart_echo_colorlight_i9 (
     end
     
 `else
-    // ========================================
-    // MODO NORMAL: ECHO - Envia de volta o que recebe
-    // Quando recebe byte via UART RX, envia de volta via TX
-    // ========================================
-    logic rx_received;
+    // ECHO COM HEADER DE SINCRONIZAÇÃO
+    localparam HEADER_BYTE = 8'hAA;
+    
+    typedef enum logic [1:0] {
+        IDLE,
+        WAIT_HEADER_ECHO,
+        ECHO_DATA
+    } state_t;
+    
+    state_t state;
+    logic [7:0] rx_fifo [0:7];  // FIFO aumentado para 8 bytes
+    logic [2:0] rx_fifo_wr_ptr;
+    logic [2:0] rx_fifo_rd_ptr;
+    logic [2:0] next_wr_ptr;
+    logic       rx_fifo_empty;
+    logic       header_received;
+    
+    assign rx_fifo_empty = (rx_fifo_wr_ptr == rx_fifo_rd_ptr);
+    assign next_wr_ptr = rx_fifo_wr_ptr + 3'b001;
+
     always_ff @(posedge clk_50mhz or negedge reset_n_internal) begin
         if (!reset_n_internal) begin
+            state <= IDLE;
             tx_dv <= 1'b0;
             tx_byte <= 8'h00;
-            rx_received <= 1'b0;
+            rx_fifo_wr_ptr <= 3'b000;
+            rx_fifo_rd_ptr <= 3'b000;
+            header_received <= 1'b0;
+            for (int i = 0; i < 8; i++) rx_fifo[i] <= 8'h00;
         end else begin
             tx_dv <= 1'b0;
-            
-            // Quando recebe novo byte e não está processando anterior
-            if (rx_dv && !rx_received) begin
-                tx_dv <= 1'b1;
-                tx_byte <= rx_byte;
-                rx_received <= 1'b1;
-            end
-            
-            // Reseta flag quando rx_dv desliga
-            if (!rx_dv && rx_received) begin
-                rx_received <= 1'b0;
-            end
+
+            case (state)
+                IDLE: begin
+                    if (rx_dv && rx_byte == HEADER_BYTE) begin
+                        header_received <= 1'b1;
+                        state <= WAIT_HEADER_ECHO;
+                    end
+                end
+                
+                WAIT_HEADER_ECHO: begin
+                    if (!tx_active) begin
+                        tx_dv <= 1'b1;
+                        tx_byte <= HEADER_BYTE;  // Echo header
+                        state <= ECHO_DATA;
+                    end
+                end
+                
+                ECHO_DATA: begin
+                    // Escreve dados no FIFO
+                    if (rx_dv) begin
+                        if (next_wr_ptr != rx_fifo_rd_ptr) begin
+                            rx_fifo[rx_fifo_wr_ptr] <= rx_byte;
+                            rx_fifo_wr_ptr <= next_wr_ptr;
+                        end
+                    end
+                    
+                    // Lê FIFO e transmite
+                    if (!rx_fifo_empty && !tx_active) begin
+                        tx_dv <= 1'b1;
+                        tx_byte <= rx_fifo[rx_fifo_rd_ptr];
+                        rx_fifo_rd_ptr <= rx_fifo_rd_ptr + 3'b001;
+                    end
+                end
+            endcase
         end
     end
 `endif

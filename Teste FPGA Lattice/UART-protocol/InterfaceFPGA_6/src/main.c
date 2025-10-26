@@ -2,72 +2,145 @@
 #include "pico/stdlib.h"
 #include "hardware/uart.h"
 
-// TESTE UART ULTRA-SIMPLIFICADO
-// Envia 'A' a cada 1 segundo e mostra o que recebe do FPGA
-
 #define UART_ID uart0
-#define BAUD_RATE 9600  // AJUSTADO PARA 9600 (mesma taxa do FPGA)
-#define UART_TX_PIN 0  // GP0 -> FPGA RX (A3 no LPF)
-#define UART_RX_PIN 1  // GP1 <- FPGA TX (D2 no LPF)
+#define BAUD_RATE 9600
+#define UART_TX_PIN 0
+#define UART_RX_PIN 1
+#define WIDTH 16
+#define LENGHT 16
+#define HEADER_BYTE 0xAA  // Byte de sincronização
+
+uint8_t queue[WIDTH*LENGHT];
+volatile int counter = 0;
+volatile bool synced = false;
+volatile bool header_echo_received = false;  // NOVA FLAG
+
+void send_image_16x16_raw(uint8_t img[WIDTH][LENGHT]);
+
+void on_uart_rx() {
+    while (uart_is_readable(UART_ID)) {
+        int rv = uart_getc(UART_ID);
+        if (rv < 0) break;
+        
+        uint8_t byte = (uint8_t)rv;
+        
+        // Espera pelo header byte para sincronizar
+        if (!synced) {
+            if (byte == HEADER_BYTE) {
+                synced = true;
+                counter = 0;
+            }
+            continue;  // Descarta bytes antes do header
+        }
+        
+        // NOVO: Descarta o ECHO do header (primeiro byte após sync)
+        if (synced && !header_echo_received) {
+            if (byte == HEADER_BYTE) {
+                header_echo_received = true;
+                continue;  // Descarta o echo do header
+            }
+        }
+        
+        // Coleta dados após sincronização E após descartar echo
+        if (counter < (WIDTH*LENGHT)) {
+            queue[counter++] = byte;
+        }
+    }
+}
 
 int main() {
-    // Inicializa stdio USB
     stdio_init_all();
     sleep_ms(2000);
+
+    uint8_t matrix[WIDTH][LENGHT];
+    for (int i = 0; i < WIDTH; i++) {
+        for (int j = 0; j < LENGHT; j++) {
+            matrix[i][j] = (i == j) ? 255 : 0;
+        }
+    }
     
-    // Configura UART
     uart_init(UART_ID, BAUD_RATE);
     gpio_set_function(UART_TX_PIN, GPIO_FUNC_UART);
     gpio_set_function(UART_RX_PIN, GPIO_FUNC_UART);
     uart_set_format(UART_ID, 8, 1, UART_PARITY_NONE);
-    uart_set_fifo_enabled(UART_ID, false);  // DESABILITA FIFO para teste
+    uart_set_fifo_enabled(UART_ID, true);
     
-    printf("\n=== TESTE UART SIMPLES ===\n");
-    printf("Enviando 'A' a cada 1s\n\n");
+    printf("\n=== TESTE UART 16x16 COM SINCRONIZACAO ===\n");
+    printf("Header: 0x%02X\n", HEADER_BYTE);
+    printf("Enviando matriz com delay de 2ms/byte...\n\n");
     
-    // Limpa FIFO RX
-    while (uart_is_readable(UART_ID)) {
-        uart_getc(UART_ID);
+    // Limpa buffer UART múltiplas vezes
+    for (int clear = 0; clear < 5; clear++) {
+        while (uart_is_readable(UART_ID)) uart_getc(UART_ID);
+        sleep_ms(20);
     }
     
-    uint32_t contador = 0;
-    char caracter = 64;
+    counter = 0;
+    synced = false;
+    header_echo_received = false;  // RESET DA FLAG
 
-    uart_putc_raw(UART_ID, 'A');
+    int UART_IRQ = (UART_ID == uart0) ? UART0_IRQ : UART1_IRQ;
+    irq_set_exclusive_handler(UART_IRQ, on_uart_rx);
+    irq_set_enabled(UART_IRQ, true);
+    uart_set_irq_enables(UART_ID, true, false);
     
-    while (1) {
-        // // Envia 'A' para o FPGA a cada 1 segundo
-        // if (contador % 1000 == 0) {
-        //     caracter = caracter + 1;
-        //     uart_putc_raw(UART_ID, caracter);
-        //     printf("[%lu] TX -> %c\n", contador / 1000, caracter);
-        // }
-        
-        // Verifica se recebeu algo do FPGA
-        if (uart_is_readable(UART_ID)) {
-            uint8_t rx = uart_getc(UART_ID);
-            if (rx == 'A')
-            {
-                printf("      RX <- '%c' (0x%02X)\n", rx, rx);
-                while (uart_is_readable(UART_ID)) {
-                uart_getc(UART_ID);
-            }
-            }
-            
-            // // Verifica se o echo está correto
-            // if (rx == caracter) {
-            //     printf("      ✓ ECHO CORRETO!\n\n");
-            // } else {
-                // printf("      ✗ ERRO: esperava %c 0X%02X, recebeu 0x%02X\n\n", caracter, caracter, rx);
-            // }
+    // ENVIA HEADER PRIMEIRO
+    uart_putc_raw(UART_ID, HEADER_BYTE);
+    sleep_ms(10);  // Espera header ser processado
+    
+    // Depois envia a imagem
+    send_image_16x16_raw(matrix);
+
+    uint32_t start_ms = to_ms_since_boot(get_absolute_time());
+    const uint32_t timeout_ms = 10000;
+    while ((counter < (WIDTH * LENGHT)) && 
+           ((to_ms_since_boot(get_absolute_time()) - start_ms) < timeout_ms)) {
+        sleep_ms(1);
+    }
+
+    sleep_ms(100);
+    uart_set_irq_enables(UART_ID, false, false);
+    irq_set_enabled(UART_IRQ, false);
+
+    printf("Matriz Original:\n");
+    for (int i = 0; i < WIDTH; i++) {
+        printf("[%02d] ", i);
+        for (int j = 0; j < LENGHT; j++) {
+            printf("|0x%02X| ", matrix[i][j]);
         }
-        tight_loop_contents();
-        
-        // sleep_ms(1);
-        // contador++;
-        // if (caracter > 'Z')
-        // {
-        //     caracter = 'A';
-        // }
+        printf("\n");
+    }
+
+    printf("\nRecebidos %d byte(s) (synced=%d, header_echo=%d):\n", 
+           counter, synced, header_echo_received);
+    if (counter == 0) {
+        printf("Nenhuma resposta do FPGA.\n");
+    } else {
+        int correct = 0;
+        for (int i = 0; i < WIDTH; i++) {
+            printf("[%02d] ", i);
+            for (int j = 0; j < LENGHT; j++) {
+                int idx = i * LENGHT + j;
+                uint8_t v = (idx < counter) ? queue[idx] : 0x00;
+                printf("|0x%02X| ", v);
+                if (v == matrix[i][j]) correct++;
+            }
+            printf("\n");
+        }
+        printf("\nBytes corretos: %d/%d (%.1f%%)\n", correct, WIDTH*LENGHT, 
+               100.0*correct/(WIDTH*LENGHT));
+    }
+
+    while (1) tight_loop_contents();
+}
+
+void send_image_16x16_raw(uint8_t img[WIDTH][LENGHT]) {
+    for (int i = 0; i < WIDTH; i++) {
+        for (int j = 0; j < LENGHT; j++) {
+            uint8_t b = img[i][j];
+            while (!uart_is_writable(UART_ID)) tight_loop_contents();
+            uart_putc_raw(UART_ID, b);
+            sleep_ms(2);  // 2ms por byte
+        }
     }
 }
