@@ -1,17 +1,5 @@
-// uart_top.sv
-// UART Top-Level Module - SystemVerilog
-// Integração completa para comunicação FPGA <-> Raspberry Pi Pico
-//
-// Este módulo integra transmissor e receptor UART para comunicação bidirecional
-// Configuração: 115200 baud, 8N1, 50 MHz clock
-//
-// Conexões com Raspberry Pi Pico:
-//   FPGA TX -> Pico RX (GP1 ou outro pino UART)
-//   FPGA RX <- Pico TX (GP0 ou outro pino UART)
-//   GND     -> GND (compartilhado)
-
 module uart_top #(
-    parameter CLK_FREQ_HZ = 50_000_000,  // Clock do sistema (50 MHz)
+    parameter CLK_FREQ_HZ = 50_000_000,  // Clock do sistema
     parameter BAUD_RATE   = 115200        // Taxa de transmissão
 ) (
     // Sinais do sistema
