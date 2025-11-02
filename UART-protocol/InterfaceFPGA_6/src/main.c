@@ -4,8 +4,8 @@
 
 #define UART_ID uart0
 #define BAUD_RATE 9600
-#define UART_TX_PIN 0
-#define UART_RX_PIN 1
+#define UART_TX_PIN 16
+#define UART_RX_PIN 17
 #define WIDTH 16
 #define LENGHT 16
 #define HEADER_BYTE 0xAA  // Byte de sincronização

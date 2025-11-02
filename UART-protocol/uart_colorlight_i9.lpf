@@ -12,9 +12,9 @@
 # ============================================================
 # Nota: O módulo UART espera 50 MHz, então use PLL para gerar 50 MHz
 # ou ajuste CLKS_PER_BIT = 217 para 25 MHz @ 115200 baud
-LOCATE COMP "clk_50mhz" SITE "P3";
-IOBUF  PORT "clk_50mhz" IO_TYPE=LVCMOS33;
-FREQUENCY PORT "clk_50mhz" 25.0 MHz;
+LOCATE COMP "clk" SITE "P3";
+IOBUF  PORT "clk" IO_TYPE=LVCMOS33;
+FREQUENCY PORT "clk" 25.0 MHz;
 
 # ============================================================
 # RESET - Botão de reset (ativo baixo)
