@@ -1,5 +1,5 @@
 // =======================================================
-// Sobel Filter FSM — compatível com Yosys e FPGA Colorlight i9
+// Sobel Filter FSM 
 // =======================================================
 module sobel_filter_seq #(
     parameter N = 16
@@ -95,3 +95,4 @@ module sobel_filter_seq #(
     end
 
 endmodule
+
