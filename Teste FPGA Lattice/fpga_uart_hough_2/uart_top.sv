@@ -109,7 +109,7 @@ module uart_top #(
         .reset_n(reset_n),
         .start(matrix_full),
         .matrix_in_flat(matrix_flat),
-        .edge_map(edge_map_flat),
+        .edge_map_flat(edge_map_flat),
         .done(sobel_done)
     );
 
@@ -171,3 +171,4 @@ module uart_top #(
     end
 
 endmodule
+
