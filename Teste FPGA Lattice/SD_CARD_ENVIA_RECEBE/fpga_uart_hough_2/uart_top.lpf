@@ -1,0 +1,19 @@
+# CLOCK - 25 MHz (oscilador interno)
+LOCATE COMP "clk" SITE "P3";
+IOBUF PORT "clk" IO_TYPE=LVCMOS33;
+FREQUENCY PORT "clk" 25.0 MHz;
+
+# RESET - Botão (ativo baixo)
+LOCATE COMP "reset_n" SITE "D1";
+IOBUF PORT "reset_n" IO_TYPE=LVCMOS33 PULLMODE=UP;
+
+# UART
+LOCATE COMP "uart_tx" SITE "D2";   # FPGA -> Pico (TX)
+IOBUF PORT "uart_tx" IO_TYPE=LVCMOS33 DRIVE=8 SLEWRATE=FAST;
+
+LOCATE COMP "uart_rx" SITE "A3";   # Pico -> FPGA (RX)
+IOBUF PORT "uart_rx" IO_TYPE=LVCMOS33 PULLMODE=UP;
+
+# LED verde (indica matriz completa)
+LOCATE COMP "led" SITE "L2";
+IOBUF PORT "led" IO_TYPE=LVCMOS33 DRIVE=8 SLEWRATE=SLOW;
