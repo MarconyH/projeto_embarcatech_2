@@ -7,7 +7,6 @@ set_target_properties(InterfaceFPGA_6 PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAK
 
 target_include_directories(InterfaceFPGA_6 PRIVATE
     ${CMAKE_CURRENT_LIST_DIR}
-
 )
 
 target_link_libraries(InterfaceFPGA_6 

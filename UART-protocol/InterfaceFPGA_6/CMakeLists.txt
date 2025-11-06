@@ -38,5 +38,5 @@ pico_sdk_init()
 add_subdirectory(src)
 
 # Modify the below lines to enable/disable output over UART/USB
-pico_enable_stdio_uart(InterfaceFPGA_6 1)
+pico_enable_stdio_uart(InterfaceFPGA_6 0)
 pico_enable_stdio_usb(InterfaceFPGA_6 1)
