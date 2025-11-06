@@ -61,7 +61,7 @@ REM ============================================================
 echo [2/5] Síntese com Yosys...
 echo ============================================================
 
-yosys -p "read_verilog -sv uart_tx.sv uart_rx.sv uart_top.sv %TOP%.sv; synth_ecp5 -top %TOP% -json %TOP%.json"
+yosys -p "read_verilog -sv uart_tx.sv uart_rx.sv uart_top.sv hough_transform.sv %TOP%.sv; synth_ecp5 -top %TOP% -json %TOP%.json"
 
 if %ERRORLEVEL% NEQ 0 (
     echo.

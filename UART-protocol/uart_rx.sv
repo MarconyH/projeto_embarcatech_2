@@ -134,6 +134,11 @@ module uart_rx #(
                 end
                 
                 STOP_BIT: begin
+                    // CORREÇÃO: Limpa o_rx_dv imediatamente após pulso
+                    if (o_rx_dv == 1'b1) begin
+                        o_rx_dv <= 1'b0;
+                    end
+                    
                     if (clk_count < CLKS_PER_BIT - 1) begin
                         clk_count <= clk_count + 1'b1;
                         
@@ -141,12 +146,9 @@ module uart_rx #(
                         if (clk_count == (CLKS_PER_BIT / 2)) begin
                             // Só aceita se frame_valid E stop bit correto
                             if (frame_valid && rx_filtered == 1'b1) begin
-                                // Frame completo e válido
+                                // Frame completo e válido - PULSO DE 1 CICLO
                                 o_rx_dv   <= 1'b1;
                                 o_rx_byte <= rx_byte;
-                            end else begin
-                                // Frame inválido - descarta silenciosamente
-                                o_rx_dv <= 1'b0;
                             end
                         end
                     end else begin
@@ -157,7 +159,7 @@ module uart_rx #(
                 
                 CLEANUP: begin
                     state   <= WAIT_IDLE;
-                    o_rx_dv <= 1'b0;
+                    o_rx_dv <= 1'b0;  // Garante que está limpo
                 end
                 
                 WAIT_IDLE: begin
